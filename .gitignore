@@ -1,0 +1,44 @@
+# Données brutes (volumineuses)
+data/raw/
+*.csv
+
+# Environnement virtuel
+venv/
+env/
+.venv/
+ENV/
+
+# Secrets
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Base locale
+*.sqlite3
+db.sqlite3
