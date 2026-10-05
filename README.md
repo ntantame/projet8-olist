@@ -11,7 +11,6 @@ Durée : 3 semaines — Groupe de 3
 ##  Règles du groupe
 - Une tâche = une branche = une pull request relue
 - Chacun committe régulièrement sous son propre compte
-- IA : on peut demander une explication, on écrit le code soi-même
 
 ##  Architecture
 (à compléter)
