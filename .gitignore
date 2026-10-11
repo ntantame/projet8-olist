@@ -1,5 +1,5 @@
 # Données brutes (volumineuses)
-data/raw/
+data/
 *.csv
 
 # Environnement virtuel
