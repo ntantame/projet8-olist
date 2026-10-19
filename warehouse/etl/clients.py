@@ -21,7 +21,7 @@ def build_dim_client():
 
     dim_client=pd.DataFrame(cmd
                .sort_values("order_purchase_timestamp")
-               .drop_duplicates("customer_unique_id")
+               .drop_duplicates("customer_unique_id", keep="last")
                .reset_index(drop=True)
                .rename(columns={
                   "customer_city":"ville",
