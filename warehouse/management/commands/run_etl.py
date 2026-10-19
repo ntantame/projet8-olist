@@ -23,6 +23,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING("demarrage du pipeline ETL..."))
 
         with transaction.atomic():
+
+            self.stdout.write("Suppression des données existantes...")
+            FaitArticleCommande.objects.all().delete()
             # chargements des dimensions
 
             # dimension Region
