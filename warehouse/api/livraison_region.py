@@ -2,9 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Avg, Count, Q, F
 from warehouse.models import FaitArticleCommande
+from rest_framework.permissions import IsAuthenticated
 
 
 class LivraisonParRegionView(APIView):
+    permission_classes = [IsAuthenticated]
 
 
     def get(self, request):
