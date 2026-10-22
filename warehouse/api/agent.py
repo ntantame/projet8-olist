@@ -10,7 +10,7 @@ from langgraph.prebuilt import create_react_agent
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated , AllowAny
 
 from warehouse.models import FaitArticleCommande
 from django.db.models import Q
