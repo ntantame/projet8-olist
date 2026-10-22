@@ -3,19 +3,21 @@ from rest_framework.response import Response
 from django.db.models import Sum, Count
 from warehouse.models import FaitArticleCommande
 from rest_framework.permissions import IsAuthenticated
+from .filtres import application_filtres
 
 
 class VentesParCategorieView(APIView):
     permission_classes = [IsAuthenticated]
-   
+
     def get(self, request):
-
         statuts_exclus = ['canceled', 'unavailable']
+        ventes = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus)
 
+        # APPLICATION DES FILTRES GLOBAUX
+        ventes = application_filtres(ventes, request)
 
-        ventes = (
-            FaitArticleCommande.objects
-            .exclude(statut_commande__in=statuts_exclus)
+        stats = (
+            ventes
             .values('produit__categorie_anglais')
             .annotate(
                 chiffre_affaires=Sum('price'),
@@ -24,14 +26,12 @@ class VentesParCategorieView(APIView):
             .order_by('-chiffre_affaires')
         )
 
-
         resultat = [
             {
                 'categorie': v['produit__categorie_anglais'] or 'inconnue',
                 'chiffre_affaires': float(v['chiffre_affaires'] or 0),
                 'nombre_articles': v['nombre_articles']
             }
-            for v in ventes
+            for v in stats
         ]
-
         return Response(resultat)
