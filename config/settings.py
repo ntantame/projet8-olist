@@ -39,11 +39,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'corsheaders',
     'drf_spectacular',
     'warehouse',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -147,4 +149,15 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API du data warehouse',
     'VERSION': '1.0.0',
 }
+
+# Configuration CORS pour autoriser React (Frontend)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# Optionnel : Si elle utilise des cookies ou des sessions avec React
+CORS_ALLOW_CREDENTIALS = True
 
