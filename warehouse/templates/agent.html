@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Olist - Assistant IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js pour formater le texte de l'IA -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Inter', sans-serif; background-color: #F8F9FA; } </style>
+</head>
+<body class="text-gray-800 p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- EN-TÊTE -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">🤖 Assistant Olist</h1>
+            <a href="/dashboard/" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow transition">⬅️ Retour au Dashboard</a>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow border border-gray-100 h-[75vh] flex flex-col">
+            <p class="text-gray-500 text-sm mb-4">Posez une question sur les chiffres. L'assistant interroge l'API et cite ses chiffres.</p>
+
+            <!-- ZONE DE CHAT -->
+            <div id="chat-history" class="flex-1 overflow-y-auto bg-gray-50 p-4 rounded-md mb-4 border border-gray-200">
+                <div class="text-gray-400 text-center text-sm mt-8">Posez votre première question ci-dessous...</div>
+            </div>
+
+            <!-- SAISIE -->
+            <div class="flex gap-2">
+                <input type="text" id="chat-input" placeholder="Ex: Quel est le CA du dernier trimestre ?" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 border focus:ring-teal-500 focus:border-teal-500" onkeypress="if(event.key === 'Enter') sendMessage()">
+                <button onclick="sendMessage()" id="send-btn" class="bg-gray-800 text-white px-6 py-3 rounded-md shadow hover:bg-gray-900 transition">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000/api";
+        const TOKEN = "89395cd4c3bffbf12d8c9f045d449f50da123788";
+        const HEADERS = { "Authorization": `Token ${TOKEN}`, "Content-Type": "application/json" };
+
+        // Configuration du style Markdown
+        marked.setOptions({
+            breaks: true, // Pour que les sauts de ligne soient respectés
+            gfm: true
+        });
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const chatHistory = document.getElementById('chat-history');
+            const question = input.value.trim();
+            if (!question) return;
+
+            if (chatHistory.innerHTML.includes("Posez votre première question")) {
+                chatHistory.innerHTML = "";
+            }
+
+            // Message Utilisateur
+            chatHistory.innerHTML += `
+                <div class="mb-4 flex justify-end">
+                    <div class="bg-teal-600 text-white px-4 py-2 rounded-lg max-w-lg shadow-sm">${question}</div>
+                </div>`;
+            input.value = "";
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            // Loader
+            const loaderId = "loader-" + Date.now();
+            chatHistory.innerHTML += `
+                <div id="${loaderId}" class="mb-4 flex justify-start">
+                    <div class="bg-gray-200 text-gray-600 px-4 py-2 rounded-lg max-w-lg shadow-sm animate-pulse">L'agent réfléchit... ⏳</div>
+                </div>`;
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            // Appel API
+            fetch(`${API_URL}/agent/ask/`, {
+                method: 'POST',
+                headers: HEADERS,
+                body: JSON.stringify({ question: question })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById(loaderId).remove();
+                const reponse = data.reponse || data.erreur || "Erreur inconnue.";
+
+                // On utilise marked.parse() pour transformer les ** en <strong>
+                const formattedReponse = marked.parse(reponse);
+
+                chatHistory.innerHTML += `
+                    <div class="mb-4 flex justify-start">
+                        <div class="bg-white text-gray-800 px-5 py-3 rounded-lg max-w-2xl border border-gray-200 shadow-sm prose prose-sm">
+                            ${formattedReponse}
+                        </div>
+                    </div>`;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            })
+            .catch(err => {
+                document.getElementById(loaderId).remove();
+                chatHistory.innerHTML += `
+                    <div class="mb-4 flex justify-start">
+                        <div class="bg-red-100 text-red-700 px-4 py-2 rounded-lg max-w-lg border border-red-200 shadow-sm">
+                            Erreur de connexion à l'agent.
+                        </div>
+                    </div>`;
+            });
+        }
+    </script>
+</body>
+</html>
