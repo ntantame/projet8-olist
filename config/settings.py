@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -81,10 +82,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'olist_warehouse',
-        'USER': 'olist_user',
-        'PASSWORD': 'django',
-        'HOST': 'localhost',
+        'NAME': os.environ.get("DB_NAME", "olist_warehouse"),
+        'USER': os.environ.get("DB_USER", "olist_user"),
+        'PASSWORD': os.environ.get("DB_PASSWORD", "django"),
+        'HOST': os.environ.get("DB_HOST", "localhost"),
         'PORT': '5432',
     }
 }
@@ -159,6 +160,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 # Optionnel :
