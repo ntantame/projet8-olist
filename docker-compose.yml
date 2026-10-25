@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: olist_db
+    environment:
+      - POSTGRES_DB=olist_warehouse
+      - POSTGRES_USER=olist_user
+      - POSTGRES_PASSWORD=django
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    container_name: olist_web
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=olist_warehouse
+      - DB_USER=olist_user
+      - DB_PASSWORD=django
+
+volumes:
+  postgres_data:
