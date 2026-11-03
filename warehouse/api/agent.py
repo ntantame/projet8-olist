@@ -1,5 +1,6 @@
 # agent conversationnel sur les KPIs du data warehouse
 
+import unicodedata
 from drf_spectacular.utils import extend_schema
 from dotenv import load_dotenv
 from django.db.models import Sum, Avg, Count
@@ -10,7 +11,7 @@ from langgraph.prebuilt import create_react_agent
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated , AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from warehouse.models import FaitArticleCommande
 from django.db.models import Q
@@ -19,38 +20,84 @@ from django.db.models import Q
 load_dotenv()
 
 
+# --- FONCTION MAGIQUE POUR ENLEVER LES ACCENTS ---
+def enlever_accents(texte):
+    if not texte:
+        return texte
+    # Transforme "São Paulo" en "Sao Paulo" puis "sao paulo"
+    texte_sans_accent = unicodedata.normalize('NFKD', texte).encode('ASCII', 'ignore').decode('utf-8')
+    return texte_sans_accent.lower()
+
+
 @tool
-def get_ca_total() -> str:
+def get_ca_total(region: str = None, ville: str = None, annee: int = None, categorie: str = None) -> str:
     """retourne le chiffre d'affaires total excluant les commandes annulées"""
     statuts_exclus = ["canceled", "unavailable"]
     lignes = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus)
+
+    if region: lignes = lignes.filter(region_client__etat=region.upper())
+    if ville:
+        # On nettoie la ville avec la fonction magique
+        ville_propre = enlever_accents(ville)
+        lignes = lignes.filter(client__ville__icontains=ville_propre)
+    if annee: lignes = lignes.filter(date_achat__annee=annee)
+    if categorie: lignes = lignes.filter(produit__categorie_anglais__iexact=categorie)
+
     total = lignes.aggregate(total=Sum("price"))["total"] or 0
     return f"Le chiffre d'affaire total est de {round(float(total), 2)} R$."
 
 
 @tool
-def get_total_commandes() -> str:
-    """retourne le nombre total de commandes distinctes du data ware house."""
-    total_cmde = FaitArticleCommande.objects.values("order_id").distinct().count() or 0
-    return f"Le data warehouse possede {total_cmde} commandes distinctes."
+def get_total_commandes(region: str = None, ville: str = None, annee: int = None, categorie: str = None) -> str:
+    """Retourne le nombre total de commandes distinctes. Accepte des filtres optionnels (region, ville, annee, categorie)."""
+    lignes = FaitArticleCommande.objects.all()
+
+    if region: lignes = lignes.filter(region_client__etat=region.upper())
+    if ville:
+        ville_propre = enlever_accents(ville)
+        lignes = lignes.filter(client__ville__icontains=ville_propre)
+    if annee: lignes = lignes.filter(date_achat__annee=annee)
+    if categorie: lignes = lignes.filter(produit__categorie_anglais__iexact=categorie)
+
+    total_cmde = lignes.values("order_id").distinct().count() or 0
+    return f"Le data warehouse possede {total_cmde} commandes distinctes (avec les filtres appliques)."
 
 
 @tool
-def get_delai_moyenne() -> str:
-    """retourne le delai moyen de livraison en jours."""
-    moyenne = FaitArticleCommande.objects.aggregate(m=Avg("delai_livraison_jour"))["m"] or 0
-    return f"Le delai moyen de livraison est de {round(float(moyenne), 2)} jours."
+def get_delai_moyenne(region: str = None, ville: str = None, annee: int = None, categorie: str = None) -> str:
+    """Retourne le delai moyen de livraison en jours. Accepte des filtres optionnels (region, ville, annee, categorie)."""
+    lignes = FaitArticleCommande.objects.all()
+
+    if region: lignes = lignes.filter(region_client__etat=region.upper())
+    if ville:
+        ville_propre = enlever_accents(ville)
+        lignes = lignes.filter(client__ville__icontains=ville_propre)
+    if annee: lignes = lignes.filter(date_achat__annee=annee)
+    if categorie: lignes = lignes.filter(produit__categorie_anglais__iexact=categorie)
+
+    moyenne = lignes.aggregate(m=Avg("delai_livraison_jour"))["m"] or 0
+    return f"Le delai moyen de livraison est de {round(float(moyenne), 2)} jours (avec les filtres appliques)."
 
 
 @tool
-def get_taux_retard() -> str:
-    """retourne le taux de retard de livraison en pourcentage."""
-    total = FaitArticleCommande.objects.filter(est_en_retard__isnull=False).count()
+def get_taux_retard(region: str = None, ville: str = None, annee: int = None) -> str:
+    """Retourne le taux de retard de livraison en pourcentage. Accepte des filtres optionnels (region, ville, annee)."""
+
+    requete = FaitArticleCommande.objects.filter(est_en_retard__isnull=False)
+
+    if region: requete = requete.filter(region_client__etat=region.upper())
+    if ville:
+        ville_propre = enlever_accents(ville)
+        requete = requete.filter(client__ville__icontains=ville_propre)
+    if annee: requete = requete.filter(date_achat__annee=annee)
+
+    total = requete.count()
     if total == 0:
-        return "Pas de données de retard disponibles."
-    total_retards = FaitArticleCommande.objects.filter(est_en_retard=True).count()
+        return "Pas de donnees de retard disponibles pour ces criteres."
+
+    total_retards = requete.filter(est_en_retard=True).count()
     taux = (total_retards / total) * 100
-    return f"Le taux de retard est de {round(taux, 2)} %."
+    return f"Le taux de retard est de {round(taux, 2)} % (avec les filtres appliques)."
 
 
 @tool
@@ -70,11 +117,11 @@ def get_ventes_par_categorie() -> str:
         .order_by('-total')[:10]
 
     if not resultats:
-        return "Aucune donnee de vente par catégorie disponible."
+        return "Aucune donnee de vente par categorie disponible."
 
-    texte = "Voici le chiffre d'affaires par catégorie :Top 10 :\n"
+    texte = "Voici le chiffre d'affaires par categorie :Top 10 :\n"
     for r in resultats:
-        categorie = r['produit__categorie_anglais'] or "Non renseignée"
+        categorie = r['produit__categorie_anglais'] or "Non renseignee"
         total = round(float(r['total'] or 0), 2)
         texte += f"- {categorie} : {total} R$\n"
     return texte
@@ -112,8 +159,29 @@ def get_satisfaction_par_region() -> str:
     return texte
 
 
-from django.db.models import Q  # N'oublie pas cet import si tu ne l'as pas déjà
+@tool
+def get_ca_par_region(annee: int = None) -> str:
+    """Retourne le chiffre d'affaires total regroupé par région. Accepte un filtre optionnel sur l'année (ex: annee=2017)."""
+    statuts_exclus = ["canceled", "unavailable"]
+    lignes = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus)
 
+    # Application du filtre d'année si l'agent le trouve
+    if annee:
+        lignes = lignes.filter(date_achat__annee=annee)
+
+    resultats = lignes.values('region_client__etat') \
+        .annotate(total=Sum('price')) \
+        .order_by('-total')
+
+    if not resultats:
+        return "Aucune donnée de vente par région disponible pour ces critères."
+
+    texte = f"Voici le chiffre d'affaires par région" + (f" pour l'année {annee}" if annee else "") + " :\n"
+    for r in resultats:
+        region = r['region_client__etat'] or "Inconnue"
+        total = round(float(r['total'] or 0), 2)
+        texte += f"- {region} : {total} R$\n"
+    return texte
 
 @tool
 def analyser_anomalies_retards() -> str:
@@ -121,7 +189,6 @@ def analyser_anomalies_retards() -> str:
     detecte les pics de retards anormaux ,pour chaque anomalie, identifie les régions les plus touchées pour aider
     a formuler une hypothese causale.
     """
-    # Calcul du taux de retard global
     total_filtre = FaitArticleCommande.objects.filter(est_en_retard__isnull=False)
     total_global = total_filtre.count()
     if total_global == 0:
@@ -130,7 +197,6 @@ def analyser_anomalies_retards() -> str:
     retards_globaux = total_filtre.filter(est_en_retard=True).count()
     taux_moyen_global = (retards_globaux / total_global) * 100
 
-    # Analyse par mois via la dimension Temps
     stats_mois = total_filtre.values('date_achat__annee', 'date_achat__mois') \
         .annotate(
         nb_total=Count('id'),
@@ -141,13 +207,11 @@ def analyser_anomalies_retards() -> str:
     anomalies_trouvees = False
 
     for m in stats_mois:
-        # On ignore les mois avec très peu de commandes (bruit statistique)
         if m['nb_total'] < 100:
             continue
 
         taux_mois = (m['nb_retards'] / m['nb_total']) * 100
 
-        # Condition d'anomalie : 1.5 fois la moyenne globale
         if taux_mois > (taux_moyen_global * 1.5):
             anomalies_trouvees = True
             annee = m['date_achat__annee']
@@ -156,7 +220,6 @@ def analyser_anomalies_retards() -> str:
             texte_final += f"ANOMALIE DETECTEE : {mois:02d}/{annee}\n"
             texte_final += f"- Taux de retard ce mois-la : {round(taux_mois, 2)} % (sur {m['nb_total']} commandes)\n"
 
-            # Recherche de la cause : quelles regions ont le plus souffert ce mois-la ?
             regions_touchees = total_filtre.filter(
                 date_achat__annee=annee,
                 date_achat__mois=mois,
@@ -170,7 +233,6 @@ def analyser_anomalies_retards() -> str:
                 reg = r['region_client__grande_region'] or "Inconnue"
                 texte_final += f"  * {reg} ({r['nb']} retards)\n"
 
-            # On regarde aussi le délai moyen pour ce mois
             delai_moyen = total_filtre.filter(
                 date_achat__annee=annee,
                 date_achat__mois=mois
@@ -184,17 +246,59 @@ def analyser_anomalies_retards() -> str:
     return texte_final
 
 
-#  LA VUE API
+@tool
+def get_top_flop_ca_par_region() -> str:
+    """Retourne la région avec le chiffre d'affaires le plus élevé et celle avec le plus bas."""
+    statuts_exclus = ["canceled", "unavailable"]
+    stats = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus) \
+        .values('region_client__etat') \
+        .annotate(CA=Sum('price')) \
+        .order_by('-CA')
 
+    if not stats:
+        return "Pas de données disponibles."
+
+    top_region = stats.first()
+    flop_region = stats.last()
+
+    return (f"La région avec le CA le plus élevé est {top_region['region_client__etat']} "
+            f"avec {round(float(top_region['CA']), 2)} R$.\n"
+            f"La région avec le CA le plus bas est {flop_region['region_client__etat']} "
+            f"avec {round(float(flop_region['CA']), 2)} R$.")
+
+
+@tool
+def get_top_flop_ca_par_ville() -> str:
+    """Retourne la ville avec le chiffre d'affaires le plus élevé et celle avec le plus bas (parmi les villes ayant au moins 100 commandes)."""
+    statuts_exclus = ["canceled", "unavailable"]
+    stats = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus) \
+        .values('client__ville') \
+        .annotate(CA=Sum('price'), nb_cmd=Count('order_id', distinct=True)) \
+        .filter(nb_cmd__gte=100) \
+        .order_by('-CA')
+
+    if not stats:
+        return "Pas de données disponibles."
+
+    top_ville = stats.first()
+    flop_ville = stats.last()
+
+    return (f"La ville avec le CA le plus élevé est {top_ville['client__ville'].title()} "
+            f"avec {round(float(top_ville['CA']), 2)} R$.\n"
+            f"La ville avec le CA le plus bas (minimum 100 commandes) est {flop_ville['client__ville'].title()} "
+            f"avec {round(float(flop_ville['CA']), 2)} R$.")
+
+
+#  LA VUE API
 @extend_schema(request={
-        'application/json': {
-            'type': 'object',
-            'properties': {
-                'question': {'type': 'string'}
-            },
-            'required': ['question']
-        }
+    'application/json': {
+        'type': 'object',
+        'properties': {
+            'question': {'type': 'string'}
+        },
+        'required': ['question']
     }
+}
 )
 class AgentAskView(APIView):
     permission_classes = [IsAuthenticated]
@@ -205,13 +309,11 @@ class AgentAskView(APIView):
         if not question:
             return Response({"erreur": "question vide"}, status=400)
 
-        # initialisation du LLM groq
         llm = ChatGroq(
             model="openai/gpt-oss-120b",
             temperature=0,
         )
 
-        # liste des outils (TOUS les outils sont ici !)
         tools = [
             get_ca_total,
             get_total_commandes,
@@ -220,17 +322,17 @@ class AgentAskView(APIView):
             get_score_moyenne,
             get_ventes_par_categorie,
             get_livraison_par_region,
+            get_ca_par_region,
             get_satisfaction_par_region,
-            analyser_anomalies_retards
+            analyser_anomalies_retards,
+            get_top_flop_ca_par_region,
+            get_top_flop_ca_par_ville
         ]
 
-        # creation de l'agent
         agent = create_react_agent(llm, tools)
 
         try:
-            # nouvelle api
             resultat = agent.invoke({"messages": [("user", question)]})
-            # recuperation du contenu du message
             reponse = resultat["messages"][-1].content
             return Response({"reponse": reponse})
         except Exception as e:

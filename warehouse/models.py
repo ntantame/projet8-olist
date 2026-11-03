@@ -114,7 +114,4 @@ class FaitArticleCommande(models.Model):
 
     def __str__(self):
         return f"{self.order_id} ({self.order_item_id})"
-
-
-
 # Create your models here.
