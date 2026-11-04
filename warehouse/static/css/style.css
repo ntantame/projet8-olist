@@ -12,3 +12,17 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
+
+/* Adaptation de la sidebar pour les grands écrans */
+aside {
+    /* Par défaut, on garde une taille raisonnable */
+    width: 280px !important;
+}
+
+@media (min-width: 1440px) {
+    /* Sur les très grands écrans (comme le tien), on élargit la sidebar à 22% de l'écran */
+    aside {
+        width: 22vw !important;
+        min-width: 350px !important;
+    }
+}

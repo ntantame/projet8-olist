@@ -18,7 +18,7 @@
     <!-- BARRE LATÉRALE (SIDEBAR) - Style Maquette -->
     <!-- ========================================== -->
     <aside class="w-64 bg-gray-900 text-white flex flex-col h-full shadow-lg z-10 flex-shrink-0">
-        <div class="p-6">
+        <div class="p-6 flex flex-col h-full">
             <!-- Titre / Logo -->
             <h2 class="text-2xl font-bold mb-2 text-teal-400">Olist - Pilotage</h2>
             <p class="text-xs text-gray-400 mb-8">Tableau de bord e-commerce</p>
@@ -31,7 +31,7 @@
             <!-- Filtres Globaux -->
             <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Filtres globaux</h3>
 
-            <div class="space-y-4">
+            <div class="space-y-6">
                 <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1">Date début</label>
                     <input type="date" id="filter-date-debut" class="w-full bg-gray-800 text-white border-gray-700 rounded-md p-2 border text-sm focus:ring-teal-500 focus:border-teal-500">
@@ -58,7 +58,7 @@
                     <datalist id="villes-list"></datalist>
                 </div>
             </div>
-
+            <div class="flex-grow"></div>
             <button onclick="loadAllData()" class="w-full bg-teal-600 text-white px-4 py-2 rounded-md shadow hover:bg-teal-500 mt-6 font-medium transition">
                 Appliquer les filtres
             </button>
