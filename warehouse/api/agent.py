@@ -287,6 +287,72 @@ def get_top_flop_ca_par_ville() -> str:
             f"avec {round(float(flop_ville['CA']), 2)} R$.")
 
 
+@tool
+def get_top_flop_categories_par_region(region: str, limite: int = 2) -> str:
+    """Retourne les N catégories de produits avec le CA le plus bas et le plus élevé pour une région donnée.
+    - region: l'état (ex: 'SP').
+    - limite: le nombre de catégories à afficher (par défaut 2)."""
+    statuts_exclus = ["canceled", "unavailable"]
+    lignes = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus)
+
+    lignes = lignes.filter(region_client__etat=region.upper())
+
+    stats = lignes.values('produit__categorie_anglais') \
+        .annotate(total=Sum('price')) \
+        .order_by('total')
+
+    if not stats:
+        return f"Aucune donnée disponible pour la région {region}."
+
+    # Utilisation de la limite dynamique
+    plus_basses = stats[:limite]
+    plus_hautes = list(stats)[-limite:]
+
+    texte = f"Pour la région {region.upper()} :\n"
+    texte += f"Top {limite} des catégories au CA le plus BAS :\n"
+    for r in plus_basses:
+        texte += f"- {r['produit__categorie_anglais']} : {round(float(r['total']), 2)} R$\n"
+
+    texte += f"\nTop {limite} des catégories au CA le plus HAUT :\n"
+    for r in reversed(plus_hautes):
+        texte += f"- {r['produit__categorie_anglais']} : {round(float(r['total']), 2)} R$\n"
+
+    return texte
+
+
+@tool
+def get_top_regions_moins_retard_avec_ca(limite: int = 3) -> str:
+    """Retourne les N régions ayant le taux de retard le plus bas, avec leur chiffre d'affaires respectif.
+    - limite: le nombre de régions à afficher (par défaut 3)."""
+    statuts_exclus = ["canceled", "unavailable"]
+
+    stats_retard = FaitArticleCommande.objects.filter(est_en_retard__isnull=False) \
+        .values('region_client__etat') \
+        .annotate(
+        total=Count('id'),
+        retards=Count('id', filter=Q(est_en_retard=True))
+    )
+
+    regions_triees = []
+    for r in stats_retard:
+        if r['total'] > 100:
+            taux = (r['retards'] / r['total']) * 100
+            regions_triees.append({'etat': r['region_client__etat'], 'taux': taux})
+
+    # Utilisation de la limite dynamique
+    regions_triees = sorted(regions_triees, key=lambda x: x['taux'])[:limite]
+
+    texte = f"Voici les {limite} régions avec le taux de retard le plus bas et leur chiffre d'affaires :\n"
+    for reg in regions_triees:
+        ca = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus) \
+                 .filter(region_client__etat=reg['etat']) \
+                 .aggregate(total=Sum('price'))['total'] or 0
+
+        texte += f"- {reg['etat']} : Taux de retard de {round(reg['taux'], 2)} % | CA de {round(float(ca), 2)} R$\n"
+
+    return texte
+
+
 #  LA VUE API
 @extend_schema(request={
     'application/json': {
@@ -319,8 +385,10 @@ class AgentAskView(APIView):
             get_taux_retard,
             get_score_moyenne,
             get_ventes_par_categorie,
-            get_livraison_par_region,
             get_ca_par_region,
+            get_top_flop_categories_par_region,
+            get_top_regions_moins_retard_avec_ca,
+            get_livraison_par_region,
             get_satisfaction_par_region,
             analyser_anomalies_retards,
             get_top_flop_ca_par_region,
