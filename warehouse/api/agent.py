@@ -20,24 +20,22 @@ from django.db.models import Q
 load_dotenv()
 
 
-# --- FONCTION MAGIQUE POUR ENLEVER LES ACCENTS ---
+# fonction de retrait des accents
 def enlever_accents(texte):
     if not texte:
         return texte
-    # Transforme "São Paulo" en "Sao Paulo" puis "sao paulo"
     texte_sans_accent = unicodedata.normalize('NFKD', texte).encode('ASCII', 'ignore').decode('utf-8')
     return texte_sans_accent.lower()
 
 
 @tool
-def get_ca_total(region: str = None, ville: str = None, annee: int = None, categorie: str = None) -> str:
+def get_ca_total(region: str | None = None, ville: str | None = None, annee: int | None = None, categorie: str | None = None) -> str:
     """retourne le chiffre d'affaires total excluant les commandes annulées"""
     statuts_exclus = ["canceled", "unavailable"]
     lignes = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus)
 
     if region: lignes = lignes.filter(region_client__etat=region.upper())
     if ville:
-        # On nettoie la ville avec la fonction magique
         ville_propre = enlever_accents(ville)
         lignes = lignes.filter(client__ville__icontains=ville_propre)
     if annee: lignes = lignes.filter(date_achat__annee=annee)
@@ -48,7 +46,7 @@ def get_ca_total(region: str = None, ville: str = None, annee: int = None, categ
 
 
 @tool
-def get_total_commandes(region: str = None, ville: str = None, annee: int = None, categorie: str = None) -> str:
+def get_total_commandes(region: str | None = None, ville: str | None = None, annee: int | None = None, categorie: str | None = None) -> str:
     """Retourne le nombre total de commandes distinctes. Accepte des filtres optionnels (region, ville, annee, categorie)."""
     lignes = FaitArticleCommande.objects.all()
 
@@ -64,7 +62,7 @@ def get_total_commandes(region: str = None, ville: str = None, annee: int = None
 
 
 @tool
-def get_delai_moyenne(region: str = None, ville: str = None, annee: int = None, categorie: str = None) -> str:
+def get_delai_moyenne(region: str | None = None, ville: str | None = None, annee: int | None = None, categorie: str | None = None) -> str:
     """Retourne le delai moyen de livraison en jours. Accepte des filtres optionnels (region, ville, annee, categorie)."""
     lignes = FaitArticleCommande.objects.all()
 
@@ -80,7 +78,7 @@ def get_delai_moyenne(region: str = None, ville: str = None, annee: int = None, 
 
 
 @tool
-def get_taux_retard(region: str = None, ville: str = None, annee: int = None) -> str:
+def get_taux_retard(region: str | None = None, ville: str | None = None, annee: int | None = None) -> str:
     """Retourne le taux de retard de livraison en pourcentage. Accepte des filtres optionnels (region, ville, annee)."""
 
     requete = FaitArticleCommande.objects.filter(est_en_retard__isnull=False)
@@ -160,12 +158,11 @@ def get_satisfaction_par_region() -> str:
 
 
 @tool
-def get_ca_par_region(annee: int = None) -> str:
+def get_ca_par_region(annee: int | None = None) -> str:
     """Retourne le chiffre d'affaires total regroupé par région. Accepte un filtre optionnel sur l'année (ex: annee=2017)."""
     statuts_exclus = ["canceled", "unavailable"]
     lignes = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus)
 
-    # Application du filtre d'année si l'agent le trouve
     if annee:
         lignes = lignes.filter(date_achat__annee=annee)
 
@@ -182,6 +179,7 @@ def get_ca_par_region(annee: int = None) -> str:
         total = round(float(r['total'] or 0), 2)
         texte += f"- {region} : {total} R$\n"
     return texte
+
 
 @tool
 def analyser_anomalies_retards() -> str:
@@ -301,7 +299,7 @@ def get_top_flop_ca_par_ville() -> str:
 }
 )
 class AgentAskView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         question = request.data.get("question", "").strip()

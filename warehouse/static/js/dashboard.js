@@ -1,5 +1,5 @@
 const API_URL = "http://localhost:8000/api";
-const TOKEN = "89395cd4c3bffbf12d8c9f045d449f50da123788";
+const TOKEN = "8781ebaa9dc6090a28b4acae85e41bb74789791b";
 const HEADERS = { "Authorization": `Token ${TOKEN}`, "Content-Type": "application/json" };
 
 let chartCA, chartCat, chartLivraison, chartSatisfaction;

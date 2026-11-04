@@ -87,6 +87,9 @@ DATABASES = {
         'PASSWORD': os.environ.get("DB_PASSWORD", "django"),
         'HOST': os.environ.get("DB_HOST", "localhost"),
         'PORT': '5432',
+        'OPTIONS': {
+            'options': '-c client_encoding=utf8'
+        },
     }
 }
 

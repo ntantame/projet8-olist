@@ -10,7 +10,7 @@
     <style> body { font-family: 'Inter', sans-serif; background-color: #F8F9FA; } </style>
 </head>
 <body class="text-gray-800 p-8">
-
+     {% csrf_token %}
     <div class="max-w-4xl mx-auto">
         <!-- EN-TÊTE -->
         <div class="flex justify-between items-center mb-8">
@@ -35,10 +35,9 @@
     </div>
 
     <script>
-        const API_URL = "http://localhost:8000/api";
-        const TOKEN = "8bf3041c8e9d19ef7962714415a248d11c188967";
-        const HEADERS = { "Authorization": `Token ${TOKEN}`, "Content-Type": "application/json" };
-
+         const API_URL = "http://localhost:8000/api";
+         const TOKEN = "8781ebaa9dc6090a28b4acae85e41bb74789791b"; // On remet le token
+         const HEADERS = { "Content-Type": "application/json" };
         // Configuration du style Markdown
         marked.setOptions({
             breaks: true, // Pour que les sauts de ligne soient respectés
