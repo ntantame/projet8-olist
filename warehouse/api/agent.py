@@ -106,18 +106,38 @@ def get_score_moyenne() -> str:
 
 
 @tool
-def get_ventes_par_categorie() -> str:
-    """retourne le chiffre d'affaires total par categorie de produit."""
+def get_ventes_par_categorie(annee: int | None = None, region: str | None = None, ville: str | None = None) -> str:
+    """retourne le chiffre d'affaires total par categorie de produit. Accepte des filtres optionnels """
     statuts_exclus = ["canceled", "unavailable"]
-    resultats = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus) \
+    lignes = FaitArticleCommande.objects.exclude(statut_commande__in=statuts_exclus)
+
+    # Application des filtres
+    if annee:
+        lignes = lignes.filter(date_achat__annee=annee)
+    if region:
+        lignes = lignes.filter(region_client__etat=region.upper())
+    if ville:
+        # On utilise la fonction magique qu'on a créée pour enlever les accents
+        ville_propre = enlever_accents(ville)
+        lignes = lignes.filter(client__ville__icontains=ville_propre)
+
+    resultats = lignes \
         .values('produit__categorie_anglais') \
         .annotate(total=Sum('price')) \
         .order_by('-total')[:10]
 
     if not resultats:
-        return "Aucune donnee de vente par categorie disponible."
+        return "Aucune donnee de vente par categorie disponible pour ces criteres."
 
-    texte = "Voici le chiffre d'affaires par categorie :Top 10 :\n"
+    # Message de contexte
+    contexte = []
+    if annee: contexte.append(f"en {annee}")
+    if region: contexte.append(f"dans la région {region.upper()}")
+    if ville: contexte.append(f"à {ville}")
+
+    texte = f"Voici le chiffre d'affaires par categorie " + (
+        " ".join(contexte) if contexte else "global") + " (Top 10) :\n"
+
     for r in resultats:
         categorie = r['produit__categorie_anglais'] or "Non renseignee"
         total = round(float(r['total'] or 0), 2)
