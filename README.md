@@ -50,7 +50,7 @@ git commit -m "feat: dimension client + vendeur"
 git push origin feature/dim-client-vendeur
 
 
- Architecture du projet
+ ## Architecture du projet
 
 Notre solution suit la chaîne classique d'un projet de Business Intelligence :
 1. **Pipeline ETL** : Nettoyage et chargement des CSV Olist vers PostgreSQL.
@@ -60,13 +60,28 @@ Notre solution suit la chaîne classique d'un projet de Business Intelligence :
 5. **Frontend** : Tableau de bord interactif (HTML/JS/Chart.js) et interface de chat.
 6. **DevOps** : Conteneurisation complète avec Docker et Docker Compose.
 
-## 🤖 Architecture de l'Agent Conversationnel
+##  Conception du Data Warehouse (Modèle en étoile)
+Avant de coder, nous avons analysé les fichiers bruts (exploration) pour identifier les anomalies (doublons, dates manquantes, identifiants multiples). Cela nous a conduit à concevoir un schéma en étoile pour optimiser les requêtes d'agrégation.
+
+Décisions de conception majeures :
+Grain de la table de faits : Nous avons choisi de définir une ligne par article commandé (FaitArticleCommande). Cela permet de conserver le détail du produit et du vendeur, contrairement à un grain par commande.
+
+Double rôle pour la région : La table DimRegion est reliée deux fois à la table de faits : region_client (destination) et region_vendeur (origine).
+
+Gestion des doublons : Nous avons identifié le customer_unique_id (et non le customer_id qui change à chaque commande) pour compter les vrais clients. Les avis multiples ont été dédoublonnés pour ne garder que le plus récent.
+
+Règle métier : Le chiffre d'affaires exclut toujours les commandes avec le statut canceled et unavailable.
+Schéma du Data Warehouse :
+<img width="1117" height="792" alt="modele_DW" src="https://github.com/user-attachments/assets/5d3770b5-864b-4eb7-a8bc-6c60728e3ae5" />
+
+
+##  Architecture de l'Agent Conversationnel
 
 L'agent ne se contente pas de générer du texte : il utilise une architecture **ReAct (Reasoning and Acting)** pour interroger la base de données de manière sécurisée.
 
 *Ci-dessous, le schéma du flux d'une requête vers l'agent :*
-*(Note : Remplace `chemin_vers_ton_image.png` par le vrai chemin de ton image)*
-![Schéma de l'architecture de l'agent](chemin_vers_ton_image.png)
+<img width="2100" height="1128" alt="architecture_agent_icones_edited" src="https://github.com/user-attachments/assets/e560923b-d0fc-4943-8496-e05af77bac02" />
+
 
 **Explication du flux :**
 1. L'utilisateur pose une question sur l'interface de chat.
@@ -76,7 +91,10 @@ L'agent ne se contente pas de générer du texte : il utilise une architecture *
 5. Le résultat est renvoyé au LLM (Observation) qui formule une réponse en langage naturel.
 6. L'API renvoie la réponse formatée à l'interface.
 
-## ⚙️ Installation et Lancement
+
+
+
+##  Installation et Lancement
 
 ### Option 1 : Lancement avec Docker (Recommandé)
 1. Cloner le projet :
