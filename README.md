@@ -49,6 +49,40 @@ git commit -m "feat: dimension client + vendeur"
 # 4. Pousser sur sa branche
 git push origin feature/dim-client-vendeur
 
+
+ Architecture du projet
+
+Notre solution suit la chaîne classique d'un projet de Business Intelligence :
+1. **Pipeline ETL** : Nettoyage et chargement des CSV Olist vers PostgreSQL.
+2. **Data Warehouse** : Modélisation en étoile (1 table de faits, 5 dimensions).
+3. **API Backend** : Django REST Framework (endpoints d'agrégation sécurisés par Token).
+4. **Intelligence Artificielle** : Agent conversationnel (LangChain + Groq).
+5. **Frontend** : Tableau de bord interactif (HTML/JS/Chart.js) et interface de chat.
+6. **DevOps** : Conteneurisation complète avec Docker et Docker Compose.
+
+## 🤖 Architecture de l'Agent Conversationnel
+
+L'agent ne se contente pas de générer du texte : il utilise une architecture **ReAct (Reasoning and Acting)** pour interroger la base de données de manière sécurisée.
+
+*Ci-dessous, le schéma du flux d'une requête vers l'agent :*
+*(Note : Remplace `chemin_vers_ton_image.png` par le vrai chemin de ton image)*
+![Schéma de l'architecture de l'agent](chemin_vers_ton_image.png)
+
+**Explication du flux :**
+1. L'utilisateur pose une question sur l'interface de chat.
+2. L'API Django (`/api/agent/ask/`) reçoit la requête et initialise le LLM (Groq).
+3. L'agent analyse la question (Thought) et choisit le bon outil Python (`@tool`).
+4. L'outil exécute une requête SQL via l'ORM Django sur PostgreSQL.
+5. Le résultat est renvoyé au LLM (Observation) qui formule une réponse en langage naturel.
+6. L'API renvoie la réponse formatée à l'interface.
+
+## ⚙️ Installation et Lancement
+
+### Option 1 : Lancement avec Docker (Recommandé)
+1. Cloner le projet :
+   ```bash
+   git clone https://github.com/ntantame/projet8-olist.git
+   cd projet8-olist
 # 5. Ouvrir une Pull Request sur GitHub
 # → Un autre membre approuve
 # → Merge dans main
