@@ -169,6 +169,3 @@ Si vous souhaitez lancer l'application directement sur votre machine, suivez ces
    python manage.py runserver
    ```
 8. L'application est accessible sur `http://localhost:8000/dashboard/`.
-```
-
-Avec ce fichier, les deux images s'afficheront en grand (car on a bien mis `![...](...)`), la mise en page sera impeccable, et l'installation locale sera bien détaillée. Fais un copier-coller, commit, et c'est réglé ! 🚀
