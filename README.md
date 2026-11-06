@@ -7,50 +7,54 @@
 
 ##  Équipe et répartition
 
-| Membre | Rôle | Branche de travail                         |
-|--------|------|--------------------------------------------|
-| @ntantame | Modèles Django + DimTemps + FaitArticleCommande + Industrialisation | `feature/dim-temps-faits/ntantame`         |
-| @fouelarissa | DimClient + DimVendeur | `feature/dim-client-vendeur/fouelarissa`   |
+| Membre | Rôle | Branche de travail |
+|--------|------|--------------------|
+| @ntantame | Modèles Django + DimTemps + FaitArticleCommande + Industrialisation + Agent IA | `feature/dim-temps-faits/ntantame` |
+| @fouelarissa | DimClient + DimVendeur | `feature/dim-client-vendeur/fouelarissa` |
 | @kendricdonald | DimProduit + DimRegion | `feature/dim-produit-region/kendricdonald` |
 
 ---
 
 ##  Règles du groupe
 
-- **Une tâche = une branche = une Pull Request** relue par un autre membre
-- **Chacun committe régulièrement** sous son propre compte (pas de commits groupés en fin de projet)
-- **Point de synchronisation** tous les 2 jours (15 min)
-- **Une part modeste mais maîtrisée** vaut mieux qu'une grosse part non comprise
+- **Une tâche = une branche = une Pull Request** relue par un autre membre.
+- **Chacun committe régulièrement** sous son propre compte.
+- **Point de synchronisation** tous les 2 jours (15 min).
+- **Une part modeste mais maîtrisée** vaut mieux qu'une grosse part non comprise.
 
 ---
 
-## Workflow Git
+##  Workflow Git
 
 ### Règles strictes
-
--  **JAMAIS de push direct sur `main`** (branche protégée)
--  Toute contribution passe par une **branche `feature/...`**
--  **1 approbation** obligatoire avant merge dans `main`
--  **Toutes les conversations** doivent être résolues avant merge
+-  **JAMAIS de push direct sur `main`** (branche protégée).
+-  Toute contribution passe par une **branche `feature/...`**.
+-  **1 approbation** obligatoire avant merge dans `main`.
+-  **Toutes les conversations** doivent être résolues avant merge.
 
 ### Cycle de travail
-
 ```bash
 # 1. Récupérer les dernières modifications
 git fetch origin
 
 # 2. Passer sur sa branche
-git checkout feature/dim-client-vendeur   # (adapter selon votre branche)
+git checkout feature/ma-branche
 
 # 3. Travailler, puis commiter
 git add .
-git commit -m "feat: dimension client + vendeur"
+git commit -m "feat: description de la modification"
 
 # 4. Pousser sur sa branche
-git push origin feature/dim-client-vendeur
+git push origin feature/ma-branche
 
+# 5. Ouvrir une Pull Request sur GitHub
+# → Un autre membre approuve
+# → Merge dans main
+```
 
- ## Architecture du projet
+---
+
+##  Architecture du projet
 
 Notre solution suit la chaîne classique d'un projet de Business Intelligence :
 1. **Pipeline ETL** : Nettoyage et chargement des CSV Olist vers PostgreSQL.
@@ -60,28 +64,31 @@ Notre solution suit la chaîne classique d'un projet de Business Intelligence :
 5. **Frontend** : Tableau de bord interactif (HTML/JS/Chart.js) et interface de chat.
 6. **DevOps** : Conteneurisation complète avec Docker et Docker Compose.
 
+---
+
 ##  Conception du Data Warehouse (Modèle en étoile)
+
 Avant de coder, nous avons analysé les fichiers bruts (exploration) pour identifier les anomalies (doublons, dates manquantes, identifiants multiples). Cela nous a conduit à concevoir un schéma en étoile pour optimiser les requêtes d'agrégation.
 
-Décisions de conception majeures :
-Grain de la table de faits : Nous avons choisi de définir une ligne par article commandé (FaitArticleCommande). Cela permet de conserver le détail du produit et du vendeur, contrairement à un grain par commande.
+### Décisions de conception majeures :
+*   **Grain de la table de faits** : Nous avons choisi de définir une ligne par **article commandé** (`FaitArticleCommande`). Cela permet de conserver le détail du produit et du vendeur, contrairement à un grain par commande.
+*   **Double rôle pour la région** : La table `DimRegion` est reliée deux fois à la table de faits : `region_client` (destination) et `region_vendeur` (origine).
+*   **Gestion des doublons** : Nous avons identifié le `customer_unique_id` (et non le `customer_id` qui change à chaque commande) pour compter les vrais clients. Les avis multiples ont été dédoublonnés pour ne garder que le plus récent.
+*   **Règle métier** : Le chiffre d'affaires exclut toujours les commandes avec le statut `canceled` et `unavailable`.
 
-Double rôle pour la région : La table DimRegion est reliée deux fois à la table de faits : region_client (destination) et region_vendeur (origine).
+### Schéma du Data Warehouse :
 
-Gestion des doublons : Nous avons identifié le customer_unique_id (et non le customer_id qui change à chaque commande) pour compter les vrais clients. Les avis multiples ont été dédoublonnés pour ne garder que le plus récent.
+![Schéma du Data Warehouse](https://github.com/user-attachments/assets/5d3770b5-864b-4eb7-a8bc-6c60728e3ae5)
 
-Règle métier : Le chiffre d'affaires exclut toujours les commandes avec le statut canceled et unavailable.
-Schéma du Data Warehouse :
-<img width="1117" height="792" alt="modele_DW" src="https://github.com/user-attachments/assets/5d3770b5-864b-4eb7-a8bc-6c60728e3ae5" />
-
+---
 
 ##  Architecture de l'Agent Conversationnel
 
 L'agent ne se contente pas de générer du texte : il utilise une architecture **ReAct (Reasoning and Acting)** pour interroger la base de données de manière sécurisée.
 
 *Ci-dessous, le schéma du flux d'une requête vers l'agent :*
-<img width="2100" height="1128" alt="architecture_agent_icones_edited" src="https://github.com/user-attachments/assets/e560923b-d0fc-4943-8496-e05af77bac02" />
 
+![Architecture de l'agent](https://github.com/user-attachments/assets/e560923b-d0fc-4943-8496-e05af77bac02)
 
 **Explication du flux :**
 1. L'utilisateur pose une question sur l'interface de chat.
@@ -91,8 +98,18 @@ L'agent ne se contente pas de générer du texte : il utilise une architecture *
 5. Le résultat est renvoyé au LLM (Observation) qui formule une réponse en langage naturel.
 6. L'API renvoie la réponse formatée à l'interface.
 
+---
 
+##  Fonctionnalités clés
 
+- **Dashboard interactif** : 5 KPIs (CA, commandes, délai, retard, note), 4 graphiques interactifs (Chart.js), filtres globaux (date, région, catégorie, ville).
+- **Agent Conversationnel** : 
+  - Répond aux questions en langage naturel sur les données.
+  - Filtre les résultats par région, ville, année et catégorie.
+  - **Détection d'anomalies** : Identifie les pics de retard et propose des hypothèses causales.
+- **API REST** : Documentation interactive avec Swagger, authentification par Token.
+
+---
 
 ##  Installation et Lancement
 
@@ -101,6 +118,57 @@ L'agent ne se contente pas de générer du texte : il utilise une architecture *
    ```bash
    git clone https://github.com/ntantame/projet8-olist.git
    cd projet8-olist
-# 5. Ouvrir une Pull Request sur GitHub
-# → Un autre membre approuve
-# → Merge dans main
+   ```
+2. Créer un fichier `.env` à la racine avec la clé API Groq :
+   ```env
+   GROQ_API_KEY=votre_cle_gsk_ici
+   ```
+3. Lancer les conteneurs :
+   ```bash
+   docker compose up --build -d
+   ```
+4. Appliquer les migrations et lancer l'ETL :
+   ```bash
+   docker compose exec web python manage.py migrate
+   docker compose exec web python manage.py run_etl
+   ```
+5. Créer un superutilisateur (pour l'admin et le Token) :
+   ```bash
+   docker compose exec web python manage.py createsuperuser
+   ```
+6. L'application est accessible sur `http://localhost:8000/dashboard/`.
+
+### Option 2 : Lancement en local (sans Docker)
+Si vous souhaitez lancer l'application directement sur votre machine, suivez ces étapes :
+
+1. Créer un environnement virtuel et l'activer :
+   ```bash
+   python -m venv .venv
+   # Sous Windows :
+   .venv\Scripts\activate
+   # Sous Mac/Linux :
+   source .venv/bin/activate
+   ```
+2. Installer les dépendances :
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Créer la base de données PostgreSQL en local et configurer les accès dans `config/settings.py`.
+4. Créer le fichier `.env` avec la clé Groq.
+5. Appliquer les migrations et lancer l'ETL :
+   ```bash
+   python manage.py migrate
+   python manage.py run_etl
+   ```
+6. Créer un superutilisateur :
+   ```bash
+   python manage.py createsuperuser
+   ```
+7. Lancer le serveur Django :
+   ```bash
+   python manage.py runserver
+   ```
+8. L'application est accessible sur `http://localhost:8000/dashboard/`.
+```
+
+Avec ce fichier, les deux images s'afficheront en grand (car on a bien mis `![...](...)`), la mise en page sera impeccable, et l'installation locale sera bien détaillée. Fais un copier-coller, commit, et c'est réglé ! 🚀
